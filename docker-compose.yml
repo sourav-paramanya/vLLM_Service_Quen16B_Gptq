@@ -1,0 +1,118 @@
+# V-Code Pilot - Docker Compose Configuration
+# Production deployment with GPU isolation and resource limits
+
+version: '3.8'
+
+services:
+  v-code-pilot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: v-code-pilot
+    hostname: v-code-pilot
+    restart: unless-stopped
+    
+    # Resource limits for shared server environment
+    deploy:
+      resources:
+        limits:
+          cpus: '4'              # Limit to 4 CPU cores
+          memory: 16G            # Limit to 16GB system RAM
+        reservations:
+          cpus: '2'              # Reserve minimum 2 cores
+          memory: 8G             # Reserve minimum 8GB RAM
+          devices:
+            - driver: nvidia
+              device_ids: ['0']   # Specific GPU ID (adjust as needed)
+              capabilities: [gpu]
+    
+    # Environment configuration
+    environment:
+      # vLLM Configuration
+      - VLLM_MODEL_NAME=Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4
+      - VLLM_HOST=0.0.0.0
+      - VLLM_PORT=8000
+      - VLLM_GPU_MEMORY_UTILIZATION=0.70
+      - VLLM_DTYPE=float16
+      - VLLM_QUANTIZATION=gptq
+      - VLLM_MAX_MODEL_LEN=8192
+      - VLLM_TENSOR_PARALLEL_SIZE=1
+      
+      # FastAPI Proxy Configuration
+      - PROXY_HOST=0.0.0.0
+      - PROXY_PORT=8080
+      - VLLM_BACKEND_URL=http://localhost:8000
+      
+      # Logging Configuration
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      
+      # Token Management
+      - DEFAULT_TOKEN_BALANCE=100000
+      - TOKEN_DB_PATH=/app/data/tokens.db
+      
+      # Security
+      - API_KEY_HEADER=X-API-KEY
+      
+      # CUDA Configuration for V100S
+      - CUDA_VISIBLE_DEVICES=0
+      - TORCH_CUDA_ARCH_LIST=7.0
+      
+    # Port mappings
+    ports:
+      - "8080:8080"    # FastAPI Proxy (public)
+      # - "8000:8000"  # vLLM API (internal only, uncomment for debugging)
+    
+    # Volume mounts
+    volumes:
+      # Persistent data storage
+      - v-code-pilot-data:/app/data
+      # Logs storage
+      - v-code-pilot-logs:/app/logs
+      # Model cache (optional - speeds up subsequent starts)
+      - v-code-pilot-models:/root/.cache/huggingface
+      # Shared memory for model loading
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 8589934592  # 8GB shared memory for model loading
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Logging configuration
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s  # Allow time for model loading
+    
+    # Network configuration
+    networks:
+      - v-code-pilot-network
+
+# Named volumes for persistence
+volumes:
+  v-code-pilot-data:
+    driver: local
+  v-code-pilot-logs:
+    driver: local
+  v-code-pilot-models:
+    driver: local
+
+# Network configuration
+networks:
+  v-code-pilot-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

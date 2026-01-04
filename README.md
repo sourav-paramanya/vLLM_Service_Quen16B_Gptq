@@ -1,93 +1,294 @@
-# Bida-llm-service
+# V-Code Pilot - LLM as a Service Platform
 
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![vLLM](https://img.shields.io/badge/vLLM-0.6.4-green.svg)](https://github.com/vllm-project/vllm)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-teal.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+A production-ready **LLM as a Service (LLaaS)** platform providing an OpenAI-compatible API for AI Copilot/Coding assistance with token-based usage management.
 
-## Getting started
+## 🚀 Features
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- **OpenAI-Compatible API**: Drop-in replacement for OpenAI Chat Completions API
+- **Streaming Support**: Real-time token streaming for responsive Copilot experience
+- **Token-Based Billing**: Automatic usage tracking and balance management
+- **X-API-KEY Authentication**: Secure API access with simple key-based auth
+- **Resource Isolation**: GPU memory limits and CPU/RAM constraints for shared environments
+- **Production Ready**: Structured logging, health checks, graceful shutdown
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## 🖥️ Hardware Requirements
 
-## Add your files
+| Component | Specification |
+|-----------|---------------|
+| GPU | NVIDIA Tesla V100S (32GB VRAM) or equivalent |
+| GPU Architecture | Volta (SM 7.0) - Uses float16/GPTQ (no AWQ/BF16) |
+| System RAM | Minimum 16GB dedicated |
+| CPU Cores | Minimum 4 cores dedicated |
+| Storage | 100GB+ for model weights |
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## 📦 Model Configuration
+
+- **Model**: `Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4`
+- **Quantization**: GPTQ (4-bit) - Required for V100S
+- **Data Type**: float16 - Volta architecture compatible
+- **Context Length**: 8192 tokens (configurable)
+- **GPU Memory Utilization**: 70% (preserves headroom for shared servers)
+
+## 🏗️ Project Structure
 
 ```
-cd existing_repo
-git remote add origin https://codelab.ba-systems.com/ml/bida-llm-service.git
-git branch -M main
-git push -uf origin main
+bida-llm-service/
+├── app/
+│   ├── __init__.py           # Package initialization
+│   ├── auth.py               # API key authentication
+│   ├── config.py             # Pydantic settings management
+│   ├── logging_config.py     # Structured logging setup
+│   ├── models.py             # Pydantic request/response models
+│   ├── token_manager.py      # SQLite token balance management
+│   └── vllm_client.py        # Async vLLM backend client
+├── main.py                   # FastAPI application
+├── entrypoint.sh             # Docker startup script
+├── Dockerfile                # Multi-stage container build
+├── docker-compose.yml        # Production deployment config
+├── requirements.txt          # Python dependencies
+├── .env.example              # Environment template
+└── README.md                 # This file
 ```
 
-## Integrate with your tools
+## 🚀 Quick Start
 
-- [ ] [Set up project integrations](https://codelab.ba-systems.com/ml/bida-llm-service/-/settings/integrations)
+### 1. Clone and Configure
 
-## Collaborate with your team
+```bash
+# Clone the repository
+cd bida-llm-service
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+# Create environment configuration
+cp .env.example .env
 
-## Test and Deploy
+# Edit .env with your settings
+nano .env
+```
 
-Use the built-in continuous integration in GitLab.
+### 2. Build and Run with Docker Compose
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+```bash
+# Build the container
+docker-compose build
 
-***
+# Start the service
+docker-compose up -d
 
-# Editing this README
+# Check logs
+docker-compose logs -f
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### 3. Verify Installation
 
-## Suggestions for a good README
+```bash
+# Health check
+curl http://localhost:8080/health
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+# List models
+curl -H "X-API-KEY: your-api-key" http://localhost:8080/v1/models
+```
 
-## Name
-Choose a self-explaining name for your project.
+## 📡 API Reference
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### Authentication
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+All API requests require the `X-API-KEY` header:
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+```bash
+curl -H "X-API-KEY: your-api-key-here" http://localhost:8080/v1/models
+```
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+### Endpoints
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| GET | `/v1/models` | List available models |
+| POST | `/v1/chat/completions` | Create chat completion |
+| GET | `/v1/usage/balance` | Get token balance |
+| GET | `/v1/usage/history` | Get usage history |
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Chat Completion (Non-Streaming)
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```bash
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: your-api-key" \
+  -d '{
+    "model": "Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4",
+    "messages": [
+      {"role": "system", "content": "You are a helpful coding assistant."},
+      {"role": "user", "content": "Write a Python function to calculate fibonacci numbers."}
+    ],
+    "temperature": 0.7,
+    "max_tokens": 1024
+  }'
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### Chat Completion (Streaming)
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```bash
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: your-api-key" \
+  -d '{
+    "model": "Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4",
+    "messages": [
+      {"role": "user", "content": "Explain async/await in Python"}
+    ],
+    "stream": true,
+    "max_tokens": 512
+  }'
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+### Check Token Balance
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+```bash
+curl -H "X-API-KEY: your-api-key" http://localhost:8080/v1/usage/balance
+```
 
-## License
-For open source projects, say how it is licensed.
+**Response:**
+```json
+{
+  "api_key": "your...key",
+  "balance": 95000,
+  "total_used": 5000,
+  "created_at": "2025-01-04T10:00:00Z",
+  "last_used": "2025-01-04T15:30:00Z"
+}
+```
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VLLM_MODEL_NAME` | Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4 | HuggingFace model ID |
+| `VLLM_PORT` | 8000 | vLLM server port |
+| `VLLM_GPU_MEMORY_UTILIZATION` | 0.70 | GPU memory fraction |
+| `VLLM_DTYPE` | float16 | Model data type |
+| `VLLM_QUANTIZATION` | gptq | Quantization method |
+| `VLLM_MAX_MODEL_LEN` | 8192 | Max context length |
+| `PROXY_PORT` | 8080 | FastAPI proxy port |
+| `DEFAULT_TOKEN_BALANCE` | 100000 | Initial user balance |
+| `TOKEN_DB_PATH` | /app/data/tokens.db | SQLite database path |
+| `LOG_LEVEL` | INFO | Logging level |
+| `API_KEY_HEADER` | X-API-KEY | Auth header name |
+
+### Resource Limits (docker-compose.yml)
+
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: '4'
+      memory: 16G
+    reservations:
+      devices:
+        - driver: nvidia
+          device_ids: ['0']  # Specific GPU
+          capabilities: [gpu]
+```
+
+## 🔧 Development
+
+### Local Development (without Docker)
+
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or: venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start vLLM server (in terminal 1)
+python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4 \
+  --dtype float16 \
+  --quantization gptq \
+  --gpu-memory-utilization 0.70
+
+# Start FastAPI proxy (in terminal 2)
+export VLLM_BACKEND_URL=http://localhost:8000
+uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+```
+
+### API Documentation
+
+Once running, access the interactive API docs:
+
+- **Swagger UI**: http://localhost:8080/docs
+- **ReDoc**: http://localhost:8080/redoc
+
+## 📊 Monitoring
+
+### Health Checks
+
+```bash
+# Gateway health
+curl http://localhost:8080/health
+
+# Kubernetes probe
+curl http://localhost:8080/healthz
+```
+
+### Logs
+
+```bash
+# Docker logs
+docker-compose logs -f v-code-pilot
+
+# Log files inside container
+docker exec v-code-pilot tail -f /app/logs/vllm.log
+docker exec v-code-pilot tail -f /app/logs/proxy.log
+```
+
+## 🔐 Security Considerations
+
+1. **API Keys**: Use strong, unique API keys (minimum 32 characters recommended)
+2. **Network**: Deploy behind a reverse proxy (nginx/traefik) with TLS
+3. **Rate Limiting**: Consider adding rate limiting for production
+4. **Token Database**: Back up SQLite database regularly
+5. **Container Security**: Runs as non-root user by default
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| CUDA out of memory | Reduce `VLLM_GPU_MEMORY_UTILIZATION` |
+| Model loading slow | First run downloads weights (~20GB) |
+| Connection refused | Wait for vLLM startup (check `/health`) |
+| AWQ/BF16 errors | Ensure using `float16` and `gptq` for V100S |
+
+### Debug Mode
+
+```bash
+# Enable debug logging
+docker-compose run -e LOG_LEVEL=DEBUG v-code-pilot
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+---
+
+**V-Code Pilot** - Empowering developers with AI-powered coding assistance.
