@@ -1,5 +1,6 @@
 # V-Code Pilot - Docker Compose Configuration
 # Production deployment with GPU isolation and resource limits
+# Hugging Face Transformers Edition
 
 version: '3.8'
 
@@ -28,20 +29,16 @@ services:
     
     # Environment configuration
     environment:
-      # vLLM Configuration
-      - VLLM_MODEL_NAME=Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4
-      - VLLM_HOST=0.0.0.0
-      - VLLM_PORT=8000
-      - VLLM_GPU_MEMORY_UTILIZATION=0.70
-      - VLLM_DTYPE=float16
-      - VLLM_QUANTIZATION=gptq
-      - VLLM_MAX_MODEL_LEN=8192
-      - VLLM_TENSOR_PARALLEL_SIZE=1
+      # Model Configuration
+      - MODEL_NAME=Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4
+      - MODEL_REVISION=main
+      - MAX_MODEL_LEN=8192
+      - DEVICE=cuda:0
       
-      # FastAPI Proxy Configuration
-      - PROXY_HOST=0.0.0.0
-      - PROXY_PORT=8080
-      - VLLM_BACKEND_URL=http://localhost:8000
+      # Server Configuration
+      - HOST=0.0.0.0
+      - PORT=8080
+      - WORKERS=1  # Keep to 1 for Transformers to avoid VRAM contention
       
       # Logging Configuration
       - LOG_LEVEL=INFO
@@ -60,8 +57,7 @@ services:
       
     # Port mappings
     ports:
-      - "8080:8080"    # FastAPI Proxy (public)
-      # - "8000:8000"  # vLLM API (internal only, uncomment for debugging)
+      - "8080:8080"    # FastAPI Gateway
     
     # Volume mounts
     volumes:
@@ -69,13 +65,13 @@ services:
       - v-code-pilot-data:/app/data
       # Logs storage
       - v-code-pilot-logs:/app/logs
-      # Model cache (optional - speeds up subsequent starts)
-      - v-code-pilot-models:/root/.cache/huggingface
-      # Shared memory for model loading
+      # Model cache (speeds up subsequent starts)
+      - v-code-pilot-models:/app/models
+      # Shared memory
       - type: tmpfs
         target: /dev/shm
         tmpfs:
-          size: 8589934592  # 8GB shared memory for model loading
+          size: 8589934592  # 8GB shared memory
     
     # Security options
     security_opt:

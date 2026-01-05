@@ -1,10 +1,19 @@
 # V-Code Pilot - Python Dependencies
-# Production-ready LLaaS Platform
+# Hugging Face Transformers Implementation
 
 # =============================================================================
-# Core vLLM Engine
+# Core ML Libraries
 # =============================================================================
-vllm==0.6.4.post1
+# PyTorch with CUDA 12.4 support
+torch==2.4.0 --index-url https://download.pytorch.org/whl/cu124
+
+# Hugging Face Ecosystem
+transformers==4.46.0
+accelerate==1.0.1
+optimum==1.23.0
+
+# Quantization Support (GPTQ)
+auto-gptq==0.7.1 --no-build-isolation
 
 # =============================================================================
 # Web Framework & Server
@@ -14,16 +23,11 @@ uvicorn[standard]==0.34.0
 starlette==0.41.3
 
 # =============================================================================
-# HTTP Client (Async)
-# =============================================================================
-httpx==0.28.1
-aiohttp==3.11.11
-
-# =============================================================================
 # Data Validation & Serialization
 # =============================================================================
 pydantic==2.10.4
 pydantic-settings==2.7.0
+orjson==3.10.12
 
 # =============================================================================
 # Database (SQLite async support)
@@ -50,13 +54,5 @@ passlib[bcrypt]==1.7.4
 # =============================================================================
 # Utilities
 # =============================================================================
-tenacity==9.0.0
 python-dotenv==1.0.1
-orjson==3.10.12
-
-# =============================================================================
-# Development & Testing (optional - comment out for production)
-# =============================================================================
-# pytest==8.3.4
-# pytest-asyncio==0.24.0
-# httpx[http2]==0.28.1
+tenacity==9.0.0

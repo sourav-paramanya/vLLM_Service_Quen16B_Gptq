@@ -5,8 +5,8 @@
 FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
 
 LABEL maintainer="V-Code Pilot Team"
-LABEL description="Production LLaaS Platform for AI Copilot Assistance"
-LABEL version="1.0.0"
+LABEL description="Production LLaaS Platform using Hugging Face Transformers"
+LABEL version="2.0.0"
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -23,10 +23,6 @@ ENV CUDA_HOME=/usr/local/cuda
 ENV PATH="${CUDA_HOME}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
 ENV TORCH_CUDA_ARCH_LIST="7.0"
-
-# vLLM specific optimizations for V100S
-ENV VLLM_ATTENTION_BACKEND=FLASHINFER
-ENV VLLM_USE_TRITON_FLASH_ATTN=0
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -68,7 +64,7 @@ RUN mkdir -p /app/data /app/logs /app/models \
 COPY requirements.txt .
 
 # Install Python dependencies
-# Note: vLLM installation for V100S requires specific torch version
+# Install torch first to ensure CUDA support is detected
 RUN pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu124 \
     && pip install -r requirements.txt
 
@@ -79,11 +75,10 @@ COPY --chown=vcodepilot:vcodepilot . .
 RUN chmod +x /app/entrypoint.sh
 
 # Expose ports
-# 8000: vLLM OpenAI-compatible API
-# 8080: FastAPI Proxy Gateway
-EXPOSE 8000 8080
+# 8080: FastAPI Gateway
+EXPOSE 8080
 
-# Health check for the FastAPI proxy
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 

@@ -10,59 +10,39 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class VLLMSettings(BaseSettings):
-    """vLLM inference engine configuration."""
+class ModelSettings(BaseSettings):
+    """Hugging Face Transformers model configuration."""
     
-    model_config = SettingsConfigDict(env_prefix="VLLM_")
+    model_config = SettingsConfigDict(env_prefix="MODEL_")
     
-    model_name: str = Field(
+    name: str = Field(
         default="Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4",
         description="HuggingFace model identifier"
     )
-    host: str = Field(default="0.0.0.0", description="vLLM server host")
-    port: int = Field(default=8000, description="vLLM server port")
-    gpu_memory_utilization: float = Field(
-        default=0.70,
-        ge=0.1,
-        le=0.95,
-        description="GPU memory utilization fraction"
+    revision: str = Field(
+        default="main",
+        description="Model revision/branch"
     )
-    dtype: str = Field(
-        default="float16",
-        description="Model data type (float16 for V100S)"
-    )
-    quantization: str = Field(
-        default="gptq",
-        description="Quantization method (gptq for V100S)"
-    )
-    max_model_len: int = Field(
+    max_len: int = Field(
         default=8192,
+        alias="MAX_MODEL_LEN",
         description="Maximum sequence length"
     )
-    tensor_parallel_size: int = Field(
-        default=1,
-        description="Number of GPUs for tensor parallelism"
+    device: str = Field(
+        default="cuda:0",
+        description="Device to run the model on"
     )
-    backend_url: Optional[str] = Field(
-        default=None,
-        description="Override backend URL (auto-constructed if not set)"
+    cache_dir: str = Field(
+        default="/app/models",
+        description="Directory to cache model weights"
     )
-    
-    @property
-    def api_url(self) -> str:
-        """Get the vLLM API base URL."""
-        if self.backend_url:
-            return self.backend_url
-        return f"http://{self.host}:{self.port}"
 
 
-class ProxySettings(BaseSettings):
-    """FastAPI proxy configuration."""
+class ServerSettings(BaseSettings):
+    """FastAPI server configuration."""
     
-    model_config = SettingsConfigDict(env_prefix="PROXY_")
-    
-    host: str = Field(default="0.0.0.0", description="Proxy server host")
-    port: int = Field(default=8080, description="Proxy server port")
+    host: str = Field(default="0.0.0.0", description="Server host")
+    port: int = Field(default=8080, description="Server port")
     workers: int = Field(default=1, description="Number of uvicorn workers")
     reload: bool = Field(default=False, description="Enable auto-reload")
 
@@ -95,10 +75,6 @@ class SecuritySettings(BaseSettings):
         default=True,
         description="Enable rate limiting"
     )
-    rate_limit_requests: int = Field(
-        default=100,
-        description="Maximum requests per minute"
-    )
 
 
 class LoggingSettings(BaseSettings):
@@ -108,10 +84,6 @@ class LoggingSettings(BaseSettings):
     
     level: str = Field(default="INFO", description="Log level")
     format: str = Field(default="json", description="Log format (json/text)")
-    file_path: Optional[str] = Field(
-        default="/app/logs/v-code-pilot.log",
-        description="Log file path"
-    )
 
 
 class Settings(BaseSettings):
@@ -125,15 +97,15 @@ class Settings(BaseSettings):
     
     # Application metadata
     app_name: str = Field(default="V-Code Pilot")
-    app_version: str = Field(default="1.0.0")
+    app_version: str = Field(default="2.0.0")
     app_description: str = Field(
-        default="LLM as a Service Platform for AI Copilot Assistance"
+        default="LLM as a Service Platform (Transformers Edition)"
     )
     debug: bool = Field(default=False, description="Enable debug mode")
     
     # Sub-configurations
-    vllm: VLLMSettings = Field(default_factory=VLLMSettings)
-    proxy: ProxySettings = Field(default_factory=ProxySettings)
+    model: ModelSettings = Field(default_factory=ModelSettings)
+    server: ServerSettings = Field(default_factory=ServerSettings)
     tokens: TokenSettings = Field(default_factory=TokenSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
@@ -141,10 +113,5 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """
-    Get cached application settings.
-    
-    Returns:
-        Settings: Application configuration singleton.
-    """
+    """Get cached application settings."""
     return Settings()
