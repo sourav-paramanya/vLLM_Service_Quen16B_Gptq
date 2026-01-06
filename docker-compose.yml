@@ -3,6 +3,28 @@
 # Hugging Face Transformers Edition
 
 services:
+  vllm-gateway:
+    build:
+      context: ./autoscale-proxy
+    container_name: vllm-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - BACKEND_BASE_URL=http://vllm-server:8080
+      - VLLM_CONTAINER_NAME=vllm-server
+      - IDLE_TIMEOUT_SECONDS=600
+      - CHECK_INTERVAL_SECONDS=30
+      - WARMUP_TIMEOUT_SECONDS=900
+      - PER_REQUEST_WAIT_SECONDS=300
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - vllm-gateway-state:/tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - vllm-network
+
   vllm-server:
     image: vllm/vllm-openai:latest
     container_name: vllm-server
@@ -21,19 +43,19 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
     environment:
-      - MODEL_NAME=hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4
+      - MODEL_NAME=/models
       - HF_HOME=/root/.cache/huggingface
       - CUDA_VISIBLE_DEVICES=0
-    ports:
-      - "8080:8080"
+    # No public port here. Public traffic goes via vllm-gateway (8080).
     volumes:
       - vllm-models:/root/.cache/huggingface
+      - ./hf_models_user/Qwen3-30B-A3B-GPTQ-Int4:/models:ro
       - type: tmpfs
         target: /dev/shm
         tmpfs:
           size: 8589934592
     command:
-      - hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4
+      - /models
       - --host
       - 0.0.0.0
       - --port
@@ -50,7 +72,7 @@ services:
         max-size: "100m"
         max-file: "5"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/models"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/v1/models', timeout=2).read()"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -60,6 +82,8 @@ services:
 
 volumes:
   vllm-models:
+    driver: local
+  vllm-gateway-state:
     driver: local
 
 networks:

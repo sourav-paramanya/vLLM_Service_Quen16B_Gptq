@@ -124,6 +124,24 @@ def chat_once(
     return reply
 
 
+def resolve_default_model(base_url: str, api_key: Optional[str], timeout_s: int) -> Optional[str]:
+    """Try to discover a usable model id from the server."""
+    requests = _import_requests()
+    url = base_url.rstrip("/") + "/v1/models"
+    try:
+        resp = requests.get(url, headers=build_headers(api_key), timeout=timeout_s)
+        resp.raise_for_status()
+        data = resp.json()
+        models = data.get("data") or []
+        if models:
+            model_id = models[0].get("id")
+            if isinstance(model_id, str) and model_id:
+                return model_id
+    except Exception:
+        return None
+    return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="CLI chatbot for local vLLM OpenAI API")
     parser.add_argument(
@@ -133,7 +151,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--model",
-        default="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
+        default=None,
         help="Model id to request",
     )
     parser.add_argument(
@@ -142,7 +160,7 @@ def main() -> int:
         help="System prompt",
     )
     parser.add_argument("--temperature", type=float, default=0.6)
-    parser.add_argument("--max-tokens", type=int, default=256)
+    parser.add_argument("--max-tokens", type=int, default=1024)
     parser.add_argument(
         "--stream",
         action="store_true",
@@ -174,9 +192,15 @@ def main() -> int:
 
     messages: List[Dict[str, str]] = [{"role": "system", "content": args.system}]
 
+    model = args.model
+    if not model:
+        # Prefer auto-detecting the served model from vLLM.
+        detected = resolve_default_model(args.base_url, api_key, args.timeout)
+        model = detected or "/models"
+
     print("Simple vLLM Chatbot (type 'exit' to quit)")
     print(f"Target: {args.base_url}")
-    print(f"Model:  {args.model}")
+    print(f"Model:  {model}")
     print(f"Stream: {stream}")
 
     while True:
@@ -197,7 +221,7 @@ def main() -> int:
         try:
             assistant_text = chat_once(
                 base_url=args.base_url,
-                model=args.model,
+                model=model,
                 messages=messages,
                 temperature=args.temperature,
                 max_tokens=args.max_tokens,
