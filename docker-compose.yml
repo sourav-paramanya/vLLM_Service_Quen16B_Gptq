@@ -30,10 +30,10 @@ services:
     # Environment configuration
     environment:
       # Model Configuration
-      - MODEL_NAME=Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4
+      - MODEL_NAME=hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4
       - MODEL_REVISION=main
       - MAX_MODEL_LEN=8192
-      - DEVICE=cuda:0
+      - MODEL_DEVICE=cuda:0
       
       # Server Configuration
       - HOST=0.0.0.0
@@ -41,7 +41,7 @@ services:
       - WORKERS=1  # Keep to 1 for Transformers to avoid VRAM contention
       
       # Logging Configuration
-      - LOG_LEVEL=INFO
+      - LOG_LEVEL=info
       - LOG_FORMAT=json
       
       # Token Management
@@ -54,6 +54,11 @@ services:
       # CUDA Configuration for V100S
       - CUDA_VISIBLE_DEVICES=0
       - TORCH_CUDA_ARCH_LIST=7.0
+
+      # Hugging Face cache (avoid /home/vcodepilot permission issues)
+      - HF_HOME=/app/models/.cache/huggingface
+      - TRANSFORMERS_CACHE=/app/models/.cache/transformers
+      - HUGGINGFACE_HUB_CACHE=/app/models/.cache/huggingface/hub
       
     # Port mappings
     ports:

@@ -56,6 +56,15 @@ WORKDIR /app
 # Create non-root user for security
 RUN groupadd -r vcodepilot && useradd -r -g vcodepilot vcodepilot
 
+# Ensure the runtime user has a writable HOME (HF defaults use Path.home())
+RUN mkdir -p /home/vcodepilot \
+    && chown -R vcodepilot:vcodepilot /home/vcodepilot
+
+# Hugging Face cache directories (writable, persisted via /app/models volume)
+ENV HF_HOME=/app/models/.cache/huggingface
+ENV TRANSFORMERS_CACHE=/app/models/.cache/transformers
+ENV HUGGINGFACE_HUB_CACHE=/app/models/.cache/huggingface/hub
+
 # Create necessary directories
 RUN mkdir -p /app/data /app/logs /app/models \
     && chown -R vcodepilot:vcodepilot /app

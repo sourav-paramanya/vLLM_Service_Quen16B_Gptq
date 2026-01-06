@@ -5,7 +5,8 @@
 # Core ML Libraries
 # =============================================================================
 # PyTorch with CUDA 12.4 support
-torch==2.4.0 --index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.4.0
 
 # Hugging Face Ecosystem
 transformers==4.46.0
@@ -13,7 +14,8 @@ accelerate==1.0.1
 optimum==1.23.0
 
 # Quantization Support (GPTQ)
-auto-gptq==0.7.1 --no-build-isolation
+auto-gptq==0.7.1
+peft==0.12.0
 
 # =============================================================================
 # Web Framework & Server

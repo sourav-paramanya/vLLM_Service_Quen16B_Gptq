@@ -45,7 +45,7 @@ class ChatMessage(BaseModel):
 class ChatCompletionRequest(BaseModel):
     """OpenAI-compatible chat completion request."""
     model: str = Field(
-        default="Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4",
+        default="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
         description="Model identifier"
     )
     messages: List[ChatMessage] = Field(

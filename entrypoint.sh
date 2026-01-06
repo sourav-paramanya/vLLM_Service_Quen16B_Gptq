@@ -19,7 +19,7 @@ LOG_LEVEL="${LOG_LEVEL:-info}"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting V-Code Pilot (Transformers Edition)..."
 echo "  Model: ${MODEL_NAME}"
-echo "  Device: ${DEVICE}"
+echo "  Device: ${MODEL_DEVICE:-${DEVICE}}"
 
 # Ensure directories exist
 mkdir -p /app/data /app/logs /app/models

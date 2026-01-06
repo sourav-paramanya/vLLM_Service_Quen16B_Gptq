@@ -27,7 +27,7 @@ A production-ready **LLM as a Service (LLaaS)** platform providing an OpenAI-com
 
 ## 📦 Model Configuration
 
-- **Model**: `Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4`
+- **Model**: `hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4`
 - **Quantization**: GPTQ (4-bit)
 - **Backend**: Hugging Face Transformers + AutoGPTQ
 - **Device**: CUDA:0
@@ -82,7 +82,7 @@ curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: your-api-key" \
   -d '{
-    "model": "Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4",
+    "model": "hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
     "messages": [
       {"role": "user", "content": "Write a Python function to sort a list."}
     ],
@@ -96,7 +96,7 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MODEL_NAME` | Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4 | Model ID |
+| `MODEL_NAME` | hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4 | Model ID |
 | `DEVICE` | cuda:0 | GPU device |
 | `MAX_MODEL_LEN` | 8192 | Max sequence length |
 | `DEFAULT_TOKEN_BALANCE` | 100000 | Initial user balance |

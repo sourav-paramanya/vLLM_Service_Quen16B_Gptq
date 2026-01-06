@@ -16,7 +16,7 @@ class ModelSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MODEL_")
     
     name: str = Field(
-        default="Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4",
+        default="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
         description="HuggingFace model identifier"
     )
     revision: str = Field(
@@ -30,6 +30,7 @@ class ModelSettings(BaseSettings):
     )
     device: str = Field(
         default="cuda:0",
+        alias="DEVICE",
         description="Device to run the model on"
     )
     cache_dir: str = Field(

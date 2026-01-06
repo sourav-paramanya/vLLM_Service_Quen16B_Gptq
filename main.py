@@ -76,15 +76,36 @@ class ModelEngine:
                 cache_dir=settings.model.cache_dir,
                 trust_remote_code=True
             )
-            
-            self.model = AutoModelForCausalLM.from_pretrained(
-                settings.model.name,
-                revision=settings.model.revision,
-                device_map=self.device,
-                trust_remote_code=True,
-                cache_dir=settings.model.cache_dir,
-                torch_dtype=torch.float16,
-            )
+
+            is_cuda = isinstance(self.device, str) and self.device.startswith("cuda")
+            device_map = "auto" if is_cuda else None
+            torch_dtype = torch.float16 if is_cuda else torch.float32
+
+            try:
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    settings.model.name,
+                    revision=settings.model.revision,
+                    device_map=device_map,
+                    trust_remote_code=True,
+                    cache_dir=settings.model.cache_dir,
+                    torch_dtype=torch_dtype,
+                    low_cpu_mem_usage=True,
+                )
+            except Exception as e:
+                # Some GPTQ repos still load more reliably via AutoGPTQ directly.
+                logger.warning("Transformers load failed; trying AutoGPTQ fallback", error=str(e))
+                from auto_gptq import AutoGPTQForCausalLM  # type: ignore
+
+                # NOTE: AutoGPTQ APIs vary slightly by version; keep kwargs minimal.
+                self.model = AutoGPTQForCausalLM.from_quantized(
+                    settings.model.name,
+                    revision=settings.model.revision,
+                    cache_dir=settings.model.cache_dir,
+                    trust_remote_code=True,
+                    device=self.device if is_cuda else "cpu",
+                    use_safetensors=True,
+                )
+
             logger.info("Model loaded successfully")
         except Exception as e:
             logger.error("Failed to load model", error=str(e))
