@@ -2,118 +2,66 @@
 # Production deployment with GPU isolation and resource limits
 # Hugging Face Transformers Edition
 
-version: '3.8'
-
 services:
-  v-code-pilot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: v-code-pilot
-    hostname: v-code-pilot
+  vllm-server:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server
     restart: unless-stopped
-    
-    # Resource limits for shared server environment
+    gpus: all
     deploy:
       resources:
         limits:
-          cpus: '4'              # Limit to 4 CPU cores
-          memory: 16G            # Limit to 16GB system RAM
+          cpus: '4'
+          memory: 16G
         reservations:
-          cpus: '2'              # Reserve minimum 2 cores
-          memory: 8G             # Reserve minimum 8GB RAM
+          cpus: '2'
+          memory: 8G
           devices:
             - driver: nvidia
-              device_ids: ['0']   # Specific GPU ID (adjust as needed)
+              device_ids: ['0']
               capabilities: [gpu]
-    
-    # Environment configuration
     environment:
-      # Model Configuration
       - MODEL_NAME=hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4
-      - MODEL_REVISION=main
-      - MAX_MODEL_LEN=8192
-      - MODEL_DEVICE=cuda:0
-      
-      # Server Configuration
-      - HOST=0.0.0.0
-      - PORT=8080
-      - WORKERS=1  # Keep to 1 for Transformers to avoid VRAM contention
-      
-      # Logging Configuration
-      - LOG_LEVEL=info
-      - LOG_FORMAT=json
-      
-      # Token Management
-      - DEFAULT_TOKEN_BALANCE=100000
-      - TOKEN_DB_PATH=/app/data/tokens.db
-      
-      # Security
-      - API_KEY_HEADER=X-API-KEY
-      
-      # CUDA Configuration for V100S
+      - HF_HOME=/root/.cache/huggingface
       - CUDA_VISIBLE_DEVICES=0
-      - TORCH_CUDA_ARCH_LIST=7.0
-
-      # Hugging Face cache (avoid /home/vcodepilot permission issues)
-      - HF_HOME=/app/models/.cache/huggingface
-      - TRANSFORMERS_CACHE=/app/models/.cache/transformers
-      - HUGGINGFACE_HUB_CACHE=/app/models/.cache/huggingface/hub
-      
-    # Port mappings
     ports:
-      - "8080:8080"    # FastAPI Gateway
-    
-    # Volume mounts
+      - "8080:8080"
     volumes:
-      # Persistent data storage
-      - v-code-pilot-data:/app/data
-      # Logs storage
-      - v-code-pilot-logs:/app/logs
-      # Model cache (speeds up subsequent starts)
-      - v-code-pilot-models:/app/models
-      # Shared memory
+      - vllm-models:/root/.cache/huggingface
       - type: tmpfs
         target: /dev/shm
         tmpfs:
-          size: 8589934592  # 8GB shared memory
-    
-    # Security options
+          size: 8589934592
+    command:
+      - hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --max-model-len
+      - "8192"
+      - --tensor-parallel-size
+      - "1"
     security_opt:
       - no-new-privileges:true
-    
-    # Logging configuration
     logging:
       driver: json-file
       options:
         max-size: "100m"
         max-file: "5"
-    
-    # Health check
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/models"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 120s  # Allow time for model loading
-    
-    # Network configuration
+      start_period: 120s
     networks:
-      - v-code-pilot-network
+      - vllm-network
 
-# Named volumes for persistence
 volumes:
-  v-code-pilot-data:
-    driver: local
-  v-code-pilot-logs:
-    driver: local
-  v-code-pilot-models:
+  vllm-models:
     driver: local
 
-# Network configuration
 networks:
-  v-code-pilot-network:
+  vllm-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
