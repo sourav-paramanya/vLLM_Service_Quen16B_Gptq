@@ -46,6 +46,8 @@ services:
       - "8192"
       - --tensor-parallel-size
       - "1"
+      - --root-path
+      - /ba_llm
     security_opt:
       - no-new-privileges:true
     logging:
