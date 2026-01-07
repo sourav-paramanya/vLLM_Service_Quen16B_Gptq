@@ -3,31 +3,9 @@
 # Hugging Face Transformers Edition
 
 services:
-  vllm-gateway:
-    build:
-      context: ./autoscale-proxy
-    container_name: vllm-gateway
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - BACKEND_BASE_URL=http://vllm-server:8080
-      - VLLM_CONTAINER_NAME=vllm-server
-      - IDLE_TIMEOUT_SECONDS=600
-      - CHECK_INTERVAL_SECONDS=30
-      - WARMUP_TIMEOUT_SECONDS=900
-      - PER_REQUEST_WAIT_SECONDS=300
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - vllm-gateway-state:/tmp
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      - vllm-network
-
-  vllm-server:
+  ba_llm:
     image: vllm/vllm-openai:latest
-    container_name: vllm-server
+    container_name: ba_llm
     restart: unless-stopped
     gpus: all
     deploy:
@@ -43,19 +21,23 @@ services:
               device_ids: ['0']
               capabilities: [gpu]
     environment:
-      - MODEL_NAME=/models
+      # Default: download from Hugging Face into the persistent cache volume.
+      # To use a locally downloaded model in ./hf_models instead, set:
+      #   VLLM_MODEL=/hf_models/<your_model_folder>
+      - MODEL_NAME=${VLLM_MODEL:-Qwen/Qwen2.5-14B-Instruct-GPTQ-Int4}
       - HF_HOME=/root/.cache/huggingface
       - CUDA_VISIBLE_DEVICES=0
-    # No public port here. Public traffic goes via vllm-gateway (8080).
+    ports:
+      - "7080:8080"
     volumes:
       - vllm-models:/root/.cache/huggingface
-      - ./hf_models_user/Qwen3-30B-A3B-GPTQ-Int4:/models:ro
+      - ./hf_models:/hf_models:rw
       - type: tmpfs
         target: /dev/shm
         tmpfs:
           size: 8589934592
     command:
-      - /models
+      - ${VLLM_MODEL:-Qwen/Qwen2.5-14B-Instruct-GPTQ-Int4}
       - --host
       - 0.0.0.0
       - --port
@@ -82,8 +64,6 @@ services:
 
 volumes:
   vllm-models:
-    driver: local
-  vllm-gateway-state:
     driver: local
 
 networks:
