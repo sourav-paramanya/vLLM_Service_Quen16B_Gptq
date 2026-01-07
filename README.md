@@ -27,10 +27,26 @@ A production-ready **LLM as a Service (LLaaS)** platform providing an OpenAI-com
 
 ## 📦 Model Configuration
 
-- **Model**: `hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4`
+- **Model**: `Qwen/Qwen2.5-14B-Instruct-GPTQ-Int4`
 - **Quantization**: GPTQ (4-bit)
 - **Backend**: Hugging Face Transformers + AutoGPTQ
 - **Device**: CUDA:0
+
+### Optional: Download model into `hf_models/`
+
+If you want to keep the model on disk under `hf_models/`, download it there and run vLLM using the local path.
+
+Example (host-side download):
+
+```bash
+# Creates: ./hf_models/Qwen2.5-14B-Instruct-GPTQ-Int4/
+git lfs install
+git clone https://huggingface.co/Qwen/Qwen2.5-14B-Instruct-GPTQ-Int4 hf_models/Qwen2.5-14B-Instruct-GPTQ-Int4
+
+# Then point vLLM to that folder
+export VLLM_MODEL=/hf_models/Qwen2.5-14B-Instruct-GPTQ-Int4
+docker compose up -d --pull always
+```
 
 ## 🏗️ Project Structure
 
@@ -82,7 +98,7 @@ curl -X POST http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: your-api-key" \
   -d '{
-    "model": "hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
+    "model": "Qwen/Qwen2.5-14B-Instruct-GPTQ-Int4",
     "messages": [
       {"role": "user", "content": "Write a Python function to sort a list."}
     ],
@@ -96,7 +112,7 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MODEL_NAME` | hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4 | Model ID |
+| `MODEL_NAME` | Qwen/Qwen2.5-14B-Instruct-GPTQ-Int4 | Model ID |
 | `DEVICE` | cuda:0 | GPU device |
 | `MAX_MODEL_LEN` | 8192 | Max sequence length |
 | `DEFAULT_TOKEN_BALANCE` | 100000 | Initial user balance |
