@@ -70,7 +70,7 @@ def default_base_url() -> str:
     public_url = "https://bida-ml.oss.net.bd/ba_llm"
     if host_resolves("bida-ml.oss.net.bd"):
         return public_url
-    return "http://localhost:8080/ba_llm"
+    return "http://localhost:7080/ba_llm"
 
 
 def chat_once(
