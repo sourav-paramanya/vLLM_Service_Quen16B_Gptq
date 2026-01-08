@@ -91,6 +91,31 @@ curl http://localhost:8080/health
 
 ## 📡 API Usage
 
+### Using a URL prefix (`/ba_llm`)
+
+If you expose vLLM behind a path prefix like `/ba_llm`, start vLLM with `--root-path /ba_llm` and use a base URL that includes the prefix.
+
+Example base URL:
+
+- `https://bida-ml.oss.net.bd/ba_llm`
+
+**DNS note:** if `bida-ml.oss.net.bd` does not resolve in DNS yet, you must either create a real DNS record, or add a hosts entry on the client machine.
+
+Example hosts entry:
+
+```text
+114.130.242.114 bida-ml.oss.net.bd
+```
+
+For one-off testing without changing `/etc/hosts`, you can use `curl --resolve`:
+
+```bash
+curl -i --resolve bida-ml.oss.net.bd:443:114.130.242.114 \
+  https://bida-ml.oss.net.bd/ba_llm/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"Qwen/Qwen2.5-14B-Instruct-GPTQ-Int4","messages":[{"role":"user","content":"hi"}],"max_tokens":32}'
+```
+
 ### Chat Completion (Streaming)
 
 ```bash
