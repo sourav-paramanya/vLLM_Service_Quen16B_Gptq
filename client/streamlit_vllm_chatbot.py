@@ -11,6 +11,8 @@ import requests
 import os
 import json
 import time
+import socket
+from urllib.parse import urlparse, urlunparse
 
 def build_headers(api_key):
     headers = {"Content-Type": "application/json"}
@@ -18,7 +20,38 @@ def build_headers(api_key):
         headers["Authorization"] = f"Bearer {api_key}"
     return headers
 
+
+def normalize_base_url(base_url: str) -> str:
+    """Normalize URL by collapsing duplicate slashes in the path."""
+    if not base_url:
+        return base_url
+    parsed = urlparse(base_url)
+    path = parsed.path
+    while "//" in path:
+        path = path.replace("//", "/")
+    parsed = parsed._replace(path=path)
+    return urlunparse(parsed)
+
+
+def host_resolves(hostname: str) -> bool:
+    try:
+        socket.getaddrinfo(hostname, None)
+        return True
+    except Exception:
+        return False
+
+
+def default_base_url() -> str:
+    env_url = os.getenv("VLLM_BASE_URL")
+    if env_url:
+        return env_url
+    public_url = "https://bida-ml.oss.net.bd/ba_llm"
+    if host_resolves("bida-ml.oss.net.bd"):
+        return public_url
+    return "http://localhost:7080/ba_llm"
+
 def chat_once(base_url, model, messages, temperature, max_tokens, stream, api_key, timeout_s):
+    base_url = normalize_base_url(base_url)
     url = base_url.rstrip("/") + "/v1/chat/completions"
     payload = {
         "model": model,
@@ -64,6 +97,7 @@ def chat_once(base_url, model, messages, temperature, max_tokens, stream, api_ke
     return reply
 
 def resolve_default_model(base_url, api_key, timeout_s):
+    base_url = normalize_base_url(base_url)
     url = base_url.rstrip("/") + "/v1/models"
     try:
         resp = requests.get(url, headers=build_headers(api_key), timeout=timeout_s)
@@ -116,7 +150,22 @@ def main():
     # Sidebar settings
     with st.sidebar:
         st.header("⚙️ Settings")
-        base_url = st.text_input("Base URL", "http://localhost:7080")
+        base_url = st.text_input(
+            "Base URL",
+            default_base_url(),
+        )
+        base_url = normalize_base_url(base_url)
+
+        # Help users running this on a server that doesn't have DNS for the public name.
+        parsed = urlparse(base_url)
+        if parsed.scheme in ("http", "https") and parsed.hostname:
+            if parsed.hostname == "bida-ml.oss.net.bd" and not host_resolves(parsed.hostname):
+                st.warning(
+                    "এই মেশিনে `bida-ml.oss.net.bd` DNS resolve হচ্ছে না। "
+                    "তাই পাবলিক ডোমেইন দিয়ে call করলে কানেক্ট হবে না। "
+                    "সমাধান: এই মেশিনে `/etc/hosts` এ `114.130.242.114 bida-ml.oss.net.bd` যোগ করুন, "
+                    "অথবা Base URL হিসেবে `http://localhost:7080/ba_llm` ব্যবহার করুন।"
+                )
         api_key = st.text_input("API Key (optional)", type="password")
         
         st.divider()
