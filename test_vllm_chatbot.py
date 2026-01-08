@@ -21,6 +21,8 @@ import json
 import sys
 import time
 from typing import Dict, List, Optional
+import socket
+from urllib.parse import urlparse, urlunparse
 
 
 def _import_requests():
@@ -42,6 +44,34 @@ def build_headers(api_key: Optional[str]) -> Dict[str, str]:
         headers["Authorization"] = f"Bearer {api_key}"
     return headers
 
+def normalize_base_url(base_url: str) -> str:
+    """Normalize URL by collapsing duplicate slashes in the path."""
+    if not base_url:
+        return base_url
+    parsed = urlparse(base_url)
+    path = parsed.path
+    while "//" in path:
+        path = path.replace("//", "/")
+    parsed = parsed._replace(path=path)
+    return urlunparse(parsed)
+
+def host_resolves(hostname: str) -> bool:
+    try:
+        socket.getaddrinfo(hostname, None)
+        return True
+    except Exception:
+        return False
+
+def default_base_url() -> str:
+    import os
+    env_url = os.getenv("VLLM_BASE_URL")
+    if env_url:
+        return env_url
+    public_url = "https://bida-ml.oss.net.bd/ba_llm"
+    if host_resolves("bida-ml.oss.net.bd"):
+        return public_url
+    return "http://localhost:8080/ba_llm"
+
 
 def chat_once(
     *,
@@ -56,6 +86,7 @@ def chat_once(
 ) -> str:
     requests = _import_requests()
 
+    base_url = normalize_base_url(base_url)
     url = base_url.rstrip("/") + "/v1/chat/completions"
     payload = {
         "model": model,
@@ -127,6 +158,7 @@ def chat_once(
 def resolve_default_model(base_url: str, api_key: Optional[str], timeout_s: int) -> Optional[str]:
     """Try to discover a usable model id from the server."""
     requests = _import_requests()
+    base_url = normalize_base_url(base_url)
     url = base_url.rstrip("/") + "/v1/models"
     try:
         resp = requests.get(url, headers=build_headers(api_key), timeout=timeout_s)
@@ -143,11 +175,11 @@ def resolve_default_model(base_url: str, api_key: Optional[str], timeout_s: int)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="CLI chatbot for local vLLM OpenAI API")
+    parser = argparse.ArgumentParser(description="CLI chatbot for vLLM OpenAI API")
     parser.add_argument(
         "--base-url",
-        default="http://localhost:8080",
-        help="Base URL of vLLM server (default: http://localhost:8080)",
+        default=default_base_url(),
+        help="Base URL of vLLM server (default: public domain if DNS resolves, else localhost)",
     )
     parser.add_argument(
         "--model",
@@ -202,6 +234,9 @@ def main() -> int:
     print(f"Target: {args.base_url}")
     print(f"Model:  {model}")
     print(f"Stream: {stream}")
+    parsed = urlparse(args.base_url)
+    if parsed.hostname == "bida-ml.oss.net.bd" and not host_resolves(parsed.hostname):
+        print("WARNING: এই মেশিনে 'bida-ml.oss.net.bd' DNS resolve হচ্ছে না। '/etc/hosts' এ '114.130.242.114 bida-ml.oss.net.bd' যোগ করুন, অথবা --base-url এ localhost ব্যবহার করুন.", file=sys.stderr)
 
     while True:
         try:
