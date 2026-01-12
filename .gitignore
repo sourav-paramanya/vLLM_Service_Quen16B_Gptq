@@ -97,3 +97,5 @@ htmlcov/
 *.tar.gz
 *.zip
 hf_models_user/Qwen3-30B-A3B-GPTQ-Int4/model.safetensors
+hf_models/
+nginx/
