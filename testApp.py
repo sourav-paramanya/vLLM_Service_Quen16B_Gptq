@@ -1,18 +1,4 @@
-#!/usr/bin/env python3
-"""Simple CLI chatbot for a local vLLM OpenAI-compatible server.
 
-Default target:
-  http://localhost:8080/v1/chat/completions
-
-Usage examples:
-  python3 test_vllm_chatbot.py
-  python3 test_vllm_chatbot.py --system "তুমি একজন চাষি..." --stream
-  python3 test_vllm_chatbot.py --base-url http://localhost:8080 --model hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4
-
-Notes:
-- vLLM does not require an API key by default. If you configured one behind a proxy,
-  set VLLM_API_KEY and it will be sent as Authorization: Bearer <key>.
-"""
 
 from __future__ import annotations
 
